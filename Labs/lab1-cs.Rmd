@@ -1,0 +1,170 @@
+---
+title: "Lab1-Computational Stastics"
+author: "Prudhvi Peddmallu (prupe690), Tejashree R Mastamardi (tejma768)"
+date: "21 January 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Question 1
+
+```{r message=FALSE, warning=FALSE}
+x1<-1/3
+x2<-1/4
+if (x1-x2==1/12){
+  print("Subtraction is correct")
+}else{
+  print("Subtraction is wrong")
+}
+
+```
+
+Explanation:- We are getting the output as “subtraction is wrong”, because the number of digits after the decimals for x1-x2 and 1/12 do not the match.
+
+```{r message=FALSE, warning=FALSE}
+
+x1<-1
+x2<-1/2
+if (x1-x2==1/2){
+  print("Subtraction is correct")
+}else{
+  print("Subtraction is wrong")
+}
+```
+
+Explanation:- We are getting the output as “subtraction is correct”, because the number of digits after the decimals for x1-x2 and 1/2 are the same.
+
+```{r message=FALSE, warning=FALSE}
+
+x1 <- 1/3
+x2 <- 1/4
+if(all.equal((x1-x2),(1/12))){
+print("subtraction is correct")
+}else{
+print("subtraction is wrong")
+}
+
+```
+
+#Question 2: Derivative
+
+
+```{r message=FALSE, warning=FALSE}
+
+#2.1
+Derivative <- function(x,e) {
+a <- ((x+e)-x)/e
+return(a)
+}
+x <-1
+e<-10^-15
+Derivative(x,e)
+
+#2.2
+x <- 10000
+e<-10^-15
+Derivative(x,e)
+
+```
+ For x=1, Value obtained is 1.110223 and for x=100000 Value obtained is 0. 
+ The true values are 1. 
+ When x=1, adding epsilon which is 10^-15 which increases the magnitude of x by a very small amount. 
+ When x=10000, adding epsilon which is 10^-15 does not make much of a difference to the magnitude of x because of which the numerator becomes
+0 leading the whole equation to become 0.
+
+
+#Question 3 Variance
+
+```{r message=FALSE, warning=FALSE}
+
+set.seed(12345)
+x<-rnorm(10000,mean= 10^8,sd=1)#10000 is the sequence of observations i to 1 to 100000
+
+myvar<-function(x){
+    1/(length(x)-1)*((sum(x^2)- 1/length(x)*(sum(x))^2))# this is the formula of variance here n is the length of x observations 
+  }
+Yi<-c()
+for (i in 1:length(x)) {
+     Yi[i]<-myvar(x[1:i])-var(x[1:i])
+     }
+plot(x=1:length(Yi),y=Yi)
+
+```
+
+#Question 4: Linear Algebra
+
+```{r message=FALSE, warning=FALSE}
+
+#1
+library(dplyr)
+library(ggplot2)
+#Reading the file tecator in to R
+tecator<-read.csv("tecator.csv")
+
+```
+
+```{r message=FALSE, warning=FALSE}
+
+#2
+#matrix X are the observations of the absorbance records,levels of moisture and fat
+X<-tecator[,c(2:102,104)]#X
+X<-as.matrix(X)#Because we are multiplying matrix so we need to pass the data frame in to as.matrix
+
+#y are the proteinlevels
+y<-tecator[,c(103)]#Y is a vector with one coloum
+#Transpose XT
+XT<-t(X)
+#A = XTX
+A <- XT%*%X 
+
+#b = XTy
+b<-XT%*%y   
+
+```
+
+```{r message=FALSE, warning=FALSE}
+#3 solve()# it will show the error 
+solve(A,b) 
+#Error in solve.default(A) : system is computationally singular: reciprocal condition number = 7.13971e-17
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+#4 kappa()
+#kappa Compute or Estimate the Condition Number of a Matrix 
+condition_number<-kappa(A)
+condition_number
+```
+
+The function kappa () compute or estimate the condition  number of a matrix .The condition number of A is A mutlipled  with A transpose. and this condition number(kappa()) depends on the norm.If the condition number of a matrix is larger value then it is a"bad" condition because several orders of a magnitude.
+
+```{r message=FALSE, warning=FALSE}
+#5
+#scaleing the data 
+# 2step-matrix X are the observations of the absorbance records,levels of moisture and fat
+X<-tecator[,c(2:102,104)]#X scaled
+X_s<-scale(X)
+X_s<-as.matrix(X_s)
+# y are the proteinlevels -scaled
+y<-tecator[,c(103)]#Y is a vector with one coloum
+y_s<-scale(y)
+#Transpose XT-scaled 
+XT_s<-t(X_s)
+XT_s
+#A = XTX
+A_s <- XT_s%*%X_s
+#b = XTy
+b_s<- XT_s%*%y_s
+#3
+solve(A_s,b_s)
+#4step kappa()with scaled data
+condition_number_s<-kappa(A_s)# condition number is the //A// //Atranspose//
+condition_number_s
+```
+ 
+
+
