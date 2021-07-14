@@ -1,0 +1,205 @@
+---
+title: "Lab3"
+author: "Prudhvi Peddmallu (prupe690), Tejashree R Mastamardi (tejma768)"
+date: "February 11, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, message = FALSE, warning = FALSE,	comment = NA)
+```
+
+
+#Question1:Cluster Sampling
+
+```{r}
+#1 Importing file to R.
+
+my_data <- read.csv2("population.csv")
+
+```
+
+
+```{r}
+#2 Use a uniform random number generator to create a function that 
+#selects 1 city from the whole list by the probability scheme offered above.
+
+Select_City <- function(City){
+probability <- City$Population/sum(City$Population)
+cumulativesumprob <- cumsum(probability)
+i <- runif(1, min = 0, max = 1)
+return(which.max(i < cumulativesumprob))
+}
+
+```
+
+
+```{r}
+#3 Using the function created in Step 2 to give exactly 20 cities.
+
+city_pop <- data.frame()
+for (i in 1:20){
+Index_city <- Select_City(my_data)
+city_pop[i,1] <- my_data$Municipality[Index_city]
+city_pop[i,2] <- my_data$Population[Index_city]
+my_data <- my_data[-Index_city,]
+}
+colnames(city_pop) <- c("City","Population")
+
+```
+
+```{r}
+#4 Selected 20 cities.
+
+city_pop
+
+```
+ 
+ Explanation:-
+ Selected 20 cities are listed above, The size(population) of the selected 20 cities is quite large in number.
+ 
+```{r}
+#5 Plot of histogram showing size of all cities in the Country
+histogram1 <- hist(my_data$Population, col = "red", breaks = 50, xlab = "Population", 
+                 ylab = "All of cities")
+
+```
+```{r}
+#Plot of histogram showing the size of 20 selected cities
+histogram2 <- hist(city_pop$Population, col = "light blue", breaks = 50, xlab = "Population", 
+                   ylab = "Number of cities is 20")
+
+```
+ 
+ From the two histogram plots it is evident that they follow a similar distribution. This means that the function that we have implemented to select 20 cities seems to be doing a good job in the selection process.
+ 
+
+#Question 2: Different distributions
+The double exponential (Laplace) distribution is given by formula:
+
+$$DE(\mu,\alpha) = \frac{\alpha}{2} e^{(-\alpha|x-\mu|)}$$
+
+The Cumulative Distribution Function is given by 
+
+$$F(x)=\int_{-\infty}^{x} f(x) dx$$
+
+$$F(x)=\int_{-\infty}^{x} \frac{\alpha}{2}e^{-\alpha(x-\mu)} dx ,~~~~~(if~~x>\mu)$$
+
+$$F(x)=1-\int_{x}^{\infty} \frac{\alpha}{2}e^{-\alpha(x-\mu)} dx$$
+
+$$F(x)=1-\frac{1}{2}e^{-\alpha(x-\mu)}$$
+
+$$F(x)=\int_{-\infty}^{x} \frac{\alpha}{2}e^{\alpha(x-\mu)} dx ,~~~~~if~~x\leq\mu$$
+
+$$F(x)=\frac{1}{2}e^{\alpha(x-\mu)}$$
+
+Inverse of CDF
+
+$$For~~x>\mu,~we~got~F(x)=1-\frac{1}{2}e^{-\alpha(x-\mu)}$$
+
+$$y=1-\frac{1}{2}e^{-\alpha(x-\mu)}$$
+
+$$\frac{ln(2-2y)-\alpha\mu}{-\alpha}=x$$
+$$For~U\sim U(0,1),~~~~~\frac{ln(2-2U)-\alpha\mu}{-\alpha}=X$$
+
+$$For~~x\leq\mu,~we~got~F(x)=\frac{1}{2}e^{\alpha(x-\mu)}$$
+$$y=\frac{1}{2}e^{\alpha(x-\mu)}$$
+
+$$\frac{ln(2y)}{\alpha}+\mu=x$$
+
+$$For~U\sim U(0,1),~~~~~\frac{ln(2U)}{\alpha}+\mu=X$$
+
+
+```{r}
+#1 Write a code generating double exponential distribution DE(0; 1) from Unif(0; 1) by using the inverse CDF method.
+
+DE <- function(mu, a){
+  U <- runif(1,0,1)
+  if (U > 0.5){
+        distribution <- (log(2-2*U)-a*mu)/(-a)
+      }
+      else {
+        distribution <- (log(2*U)/a)+mu
+      }
+  return(distribution)
+}
+
+values <- c()
+for (i in 1:10000){
+values[i] <- DE(0,1)
+values
+}
+
+hist(values, breaks = 1000, main = "Inverse CDF Method used to Generate Random Numbers")
+
+```
+
+
+```{r}
+#2 Use the Acceptance/rejection method with DE(0; 1) as a majorizing density to 
+# generate N(0; 1) variables.
+
+accept_reject <- function(){
+X<-c()
+counter= 0 # counter for how many numbers been rejected
+while (length(X)==0) { # as long as our vector is empty >> do
+counter = counter+1
+Y<-DE(0,1)
+fy <- (1/sqrt(2*pi))*exp(-(1/2)*Y^2)
+Gy <- 0.5*exp(-abs(Y))
+c <- sqrt(2*exp(1)/pi)
+U = runif(1,0,1)
+if (U <= fy/(c*Gy)){
+X=Y
+}}
+gen_itr <- cbind("gen" = X, "itr" = counter)
+return(gen_itr)
+}
+
+```
+
+
+```{r}
+# generating 2000 random numbers using Acceptance/Rejection method
+res <- list()
+for (i in 1:2000){
+res[[i]]<- accept_reject()
+}
+```
+
+```{r}
+# excluding the random numbers from the list for plot
+gen <- c()
+for (i in 1:2000){
+gen[i]<- res[[i]][1]
+}
+# plotting the generated random numbers using N(0,1)
+hist(gen , breaks = 50, main = "Random numbers generated using Acceptance-Rejection Method")
+
+```
+
+
+```{r}
+# getting the total number of iterations (accepted+rejected) to commpute the average
+itr <- c()
+for (i in 1:2000){
+itr[i]<- res[[i]][2]
+}
+# average rejection rate
+average_rej <-1-(2000/sum(itr))
+average_rej
+
+```
+
+```{r}
+# expected rejection rate
+c <- sqrt(2*exp(1)/pi)
+expected_rej_rate<- 1-(1/c)
+expected_rej_rate
+```
+
+We have chosen the constant c as:-
+ $$constant = 2*e^{(1/2)/sqrt(2*pi)}$$
+The value of Average Rejection rate R = 0.24 and the value of Expected Rejection rate ER = 0.33. ER(Expected Rejection rate) is close to R(Average Rejection rate) by 0.1
+
+ 
