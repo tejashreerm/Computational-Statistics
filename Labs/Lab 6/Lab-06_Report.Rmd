@@ -1,0 +1,55 @@
+---
+title: "LAb6"
+author: "Tejashree R Mastamardi"
+date: "March 1, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+
+##Question 1: Genetic Algorithm
+
+##1. Define the function
+
+$$ f(x):= x^2/{e}^x - 2exp(-(9sinx)/(x^2+x+1))  $$
+
+
+```{r}
+
+f <- function(x){
+  f(x) = x^2/exp(x) - 2*exp(-(9*sin(x))/(x^2+x+1))
+}
+
+```
+
+
+##2. Define the function crossover(): for two scalars x and y it returns their "kid" (x+y)/2.
+```{r}
+
+crossover <- function(x, y){
+  (x+y)/2
+}
+
+```
+
+##3. Define the finction mutate() that for a scalar x returns the result of the integer division x^2 mod 30. (Operation mod is denoted in R as %%).
+```{r}
+
+mutate <- function(x){
+  x^2 %% 30
+}
+
+```
+
+##4. Write a function that depends on the parameter maximter and mutprob:
+```{r}
+
+a <- function(maxiter, mutprob){
+  X <- seq(from=0, to=30, by=5)
+  
+}
+```
+
