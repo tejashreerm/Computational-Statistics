@@ -1,0 +1,72 @@
+---
+title: "LAB05"
+author: "Tejashree R Mastamardi"
+date: "7/19/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = FALSE,
+                      warning = FALSE)
+library(ggplot2)
+library(boot)
+library(dplyr)
+library(knitr)
+```
+
+Task 1: Make a scatterplot of Y(Draft_No) versus X(Day_of_year) and conclude whether the lottery is random
+```{r message=FALSE, warning=FALSE}
+lottery <- read.csv("lottery.csv",sep = ";")
+lottery
+
+ggplot(lottery, aes(x=Day_of_year, y = Draft_No)) + geom_point() + ggtitle("Plot of Draft Number vs. day of birth")
+
+
+
+data <- read.csv("lottery.csv", sep=";")
+ggplot(data, aes(x=Day_of_year, y = Draft_No)) + geom_point() +
+ggtitle("Plot of DraftNumber vs.dayofbirth")
+```
+Randomness of lottery based on plot:
+Based on the scatterplot below, the lottery not look random. The points are distributed quite equally across the plot and it does not seem like there is any trend. However, if we look closely, it does seem like the density of the data points in the bottom right is a bit higher then e.g. in the top right. This is something we might want to investigate because for a truly random lottery we would expect the density in the top left and top right to be rather equal.
+
+Task 2: Compute an estimates Y(hat)
+```{r}
+model <- loess(Draft_No~Day_of_year, data)
+data$Y_hat <- predict(model, data)
+
+ggplot(data, aes(x=Day_of_year, y = Draft_No)) + 
+  geom_point() + 
+  geom_line(aes(y=Y_hat)) + 
+  ggtitle("Plot of Draft Number vs.day of birth")
+```
+We can see that Y_hat , the result of the smoother is decreasing with increasing day index (roughly from the middle of the year onwards). This reflects the observation from the previous task that
+the density of the data points is slightly higher in the bottom right than in the top right. The smoother supports the suspicion that the lottery was not entirely random.
+
+Task 3: Test of randomness - with non-parametric Bootstrap
+The T statistic for the overall data and a density plot can be found below.
+```{r}
+set.seed(12345)
+X <- data$Day_of_year
+Y <- data$Draft_No
+T <- numeric()
+for (i in 1:2000) {
+boot <-sample(length(X), replace=TRUE)
+data1 <- cbind(X,boot)
+X_a <- data1[which.min(data1[,2])]
+X_b <- data1[which.max(data1[,2])]
+model2 <- loess(Y~X, data=as.data.frame(data1), method="loess")
+fitted_X_a <- model2$fitted[X_a]
+fitted_X_b <- model2$fitted[X_b]
+test <- (fitted_X_b - fitted_X_a)/(X_b - X_a)
+T[i] <- test
+}
+pval <- length(which(T>=0))
+hist(T, breaks=30,
+main="Distribution of T by using non-parametric bootstrapping")
+print("Estimated p-value:")
+print(pval/2000)
+
+
+```
+
