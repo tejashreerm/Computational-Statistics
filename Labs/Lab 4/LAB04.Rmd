@@ -1,0 +1,254 @@
+---
+title: "LAB04"
+author: "Tejashree R Mastamardi"
+date: "7/20/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+library(magrittr)
+set.seed(12345)
+```
+
+Metropolis Hastings
+1. Use log normal distribution as proposal distribution
+```{r}
+#target distribution
+target <- function(x){
+  result <- (x^5 * exp(-x))
+  return(result)
+}
+
+#proposed distribution
+proposed <- function(x, mu){
+  result <- dlnorm(x, meanlog=log(mu), sdlog=1)
+  return(result)
+}
+
+#random number generator
+rng_proposed = function(Xt){
+  result = rlnorm(n=1, meanlog = log(Xt), sdlog = 1)
+  return(result)
+}
+
+# Acceptance probability alpha, required to check condition U < alpha(Xt, Y)
+alpha = function(Xt, Y){
+  numerator = target(Y) * proposed(Xt, Y)
+  denominator = target(Xt) * proposed(Y,Xt)
+  
+  if(round(denominator,8)==0){    # Case 1: when denominator is almost zero
+    return(1)
+  } else{
+    return(min(1, numerator/denominator))   # Case 2: all other cases
+  }
+}
+
+#Implementation of Metropolis Hasting sampler
+Metropolis_Hasting_sampler = function(init = 50, t_max = 500){
+  # Initialize objects and paramters (We want X_0, X_1, ...X_t_max)
+  X = numeric(length = (t_max + 1))
+  X[1] = init
+  t = 1
+  
+  #Conduct iterations of Metropolis Hastings
+  while(t < t_max){
+    U = runif(1)
+    Y = rng_proposed(X[t])
+    
+    a = alpha(X[t], Y)
+    if(U < a){
+      X[t + 1] = Y
+    } else{
+      X[t + 1] = X[t]
+    }
+    t = t + 1
+  }
+  result = list(t = 1:(t_max + 1), Xt = X)
+}
+
+result = Metropolis_Hasting_sampler(init = 50, t_max = 500)
+
+#plot
+df_plot_task1 = data.frame(t = 1:length(result$Xt), Xt = result$Xt)
+ggplot(df_plot_task1, aes(x = t, y = Xt)) +
+geom_point(color = "steelblue4", size = 0.5) +
+geom_line(color = "steelblue3") +
+geom_vline(xintercept = 10, color = "orange") +
+labs(title = "Time Series Plot of Xt by t (orange line = end of burn-in)")
+```
+
+2. Use chi-sq distribution as proposal distribution
+```{r}
+#target distribution
+target <- function(x){
+  result <- (x^5 * exp(-x))
+  return(result)
+}
+
+#proposed distribution
+proposed_chi <- function(x, Xt){
+result <- rchisq(x, df=floor(Xt+1))
+return(result)
+}
+
+rng <- function(Xt){
+  result <- rchisq(n = 1, df = floor(Xt+ 1))
+  return(result)
+}
+
+# Acceptance probability alpha, required to check condition U < alpha(Xt, Y)
+alpha = function(Xt, Y){
+  numerator = target(Y) * proposed_chi(Xt, Y)
+  denominator = target(Xt) * proposed_chi(Y,Xt)
+  
+  if(denominator >= 0){    # Case 1: when denominator is almost zero
+    return(1)
+  } else{
+    return(min(1, numerator/denominator))   # Case 2: all other cases
+  }
+}
+
+#Implementation of Metropolis Hasting sampler
+Metropolis_Hasting_sampler = function(init = 50, t_max = 500){
+  # Initialize objects and paramters (We want X_0, X_1, ...X_t_max)
+  X = numeric(length = (t_max + 1))
+  X[1] = init
+  t = 1
+  
+  #Conduct iterations of Metropolis Hastings
+  while(t < t_max){
+    U = runif(1)
+    Y = rng(X[t])
+    
+    a = alpha(X[t], Y)
+    if(U < a){
+      X[t + 1] = Y
+    } else{
+      X[t + 1] = X[t]
+    }
+    t = t + 1
+  }
+  result = list(t = 1:(t_max + 1), Xt = X)
+}
+
+res = Metropolis_Hasting_sampler(init = 50, t_max = 500)
+
+#plot
+df_plot_task2 = data.frame(t = res$t, Xt = res$Xt)
+
+ggplot(df_plot_task2, aes(x = t, y = Xt)) +
+geom_point(color = "steelblue4", size = 0.5) +
+geom_line(color = "steelblue3") +
+geom_vline(xintercept = 10, color = "orange") +
+labs(title = "Time Series Plot of Xt by t (orange line = end of burn-in)")
+
+```
+
+
+```{r}
+target<- function(x){
+result <- (x^5 * exp(-x))
+return(result)
+}
+
+proposed <- function(x,log_mean){
+result <- dlnorm(x,meanlog=log(log_mean), sd=1)
+return(result)
+}
+
+rng <- function(x){
+  rlnorm(1, log(x0),1)
+}
+
+N<- 500
+
+final <- rep(1,0,N) #Vx
+
+x0 <- 50 #Set starting value
+
+for(i in 2:N){
+  
+  y <- rng(x0) # proposed starting value
+  
+  ratio <- min(c(1,((target(y)*proposed(x0,y))/(target(x0)*proposed(y,x0)))))
+  
+  accept <- (runif(1) <= ratio)
+  
+  final[i] <- ifelse(accept,y,x0)
+  
+  x0 <- final[i]
+}
+
+step_1 <- final
+mean(final)
+
+ggplot() +
+geom_line(aes(x=1:N, y=final)) +
+geom_vline(xintercept = 10, color = "orange") +
+labs(x="Iterations", y="X") +
+ylim(0, 50) +
+ggtitle("Metropolis-Hasting Sampler using Log-Normal")
+```
+
+
+```{r}
+test <- metropolis_hastings(x_0=1, t_max = 10000, dt, dp, rp)
+# compare the distribution
+x=seq(from=0.01, to=20, by=0.002)
+actual <- numeric(length(x))
+for(i in seq_along(x)){
+actual[i] <- dt(x=x[i])
+}
+quantile(test)
+quantile(temp)
+ggplot() +
+geom_line(aes(x=1:10000, y=test)) +
+labs(x="Iterations", y="X") +
+ylim(0, 50) +
+ggtitle("Metropolis-Hasting Sampler using Chisquare")
+```
+
+```{r}
+target<- function(x){
+result <- (x^5 * exp(-x))
+return(result)
+}
+
+proposed_chi <- function(x, Xt){
+result <- rchisq(x, df=floor(Xt+1))
+return(result)
+}
+
+rng <- function(Xt){
+  rchisq(n = 1, df = floor(Xt+ 1))
+}
+
+N<- 500
+x0 <- 50 # there is a small burn in
+#x0 <- 40 #starting point no burn in
+final <- rep(NA,0,N)
+for(i in 1:N){
+
+  xprime <- rng(x0) # proposed starting value
+  
+  ratio <- min(c(1,((target(xprime)*proposed(x0,xprime))/(target(x0)*proposed   (xprime, x0)))))
+  
+  accept <- (runif(1) < ratio)
+  
+  final[i] <- ifelse(accept,xprime,x0)
+  
+  x0 <- final[i]
+}
+step_2 <- final
+mean(final)
+
+ggplot() +
+geom_line(aes(x=1:N, y=final)) +
+geom_vline(xintercept = 250, color = "orange") +
+ylim(0, 100) +
+labs(x="Iterations", y="X") + ggtitle("Metropolis-Hasting Sampler using Chi-Square")
+```
+
