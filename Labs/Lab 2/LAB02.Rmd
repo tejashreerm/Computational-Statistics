@@ -1,0 +1,265 @@
+---
+title: "LAB02"
+author: "Tejashree R Mastamardi"
+date: "7/8/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, comment = FALSE)
+```
+
+Built-in optimization in R
+- optim(x0, fun, ...) is for n-dimensional general purpose optimization
+- Argument x0 sets the initial values of the search
+- fun specifies a function to optimize over
+- Optional, named argument method chooses an algorithm
+
+Optimization functions in R minimize functions, so if you want to maximize a function you need to use the negative log-likelihood.
+
+optimize will minimize the function with a single variable only.
+
+```{r}
+#Define an objective function
+f <- function(x){
+  2*(x[1]-1)^2 + 5*(x[2]-3)^2 + 10
+}
+
+#Call optimization routine
+r <- optim(c(1,1),f)
+r
+#Check if the optimization converged to a minimum
+r$convergence == 0  #TRUE if converged
+
+#Optimal input arguments
+r$par
+
+#Objective at the minimum
+r$value
+```
+
+Golden search method is applicable for finding out optimal solution for 1Dimenssional non linear programming problem. 
+
+Question 1: Optimizing a model parameter
+
+1. Import file to R and divide into training and test datasets.
+```{r message=FALSE, warning=FALSE}
+
+library(readr)
+mortality <- read.csv2("mortality_rate.csv")
+
+mortality$lmr <- log(mortality$Rate)
+
+n=dim(mortality)[1]
+set.seed(123456)
+id=sample(1:n,floor(n*0.5))
+train=mortality[id,]
+test=mortality[id,]
+
+```
+
+2. Write your own myMSE function.
+```{r message=FALSE, warning=FALSE}
+
+myMSE <- function(pars, lambda){
+  dataFun <- data.frame(X = pars$X, Y = pars$Y)
+  #fit the loess model
+  model <- loess(Y ~ X, data = dataFun, enp.target = lambda)
+  #predictions
+  predictY <- predict(model, pars$Xtest,type="response")
+  #Predictive MSE
+  pred <- c()
+  for(i in 1:n){
+    pred[i] <- (pars$Ytest[i] - predictY[i])^2
+  }
+  predMSE <- (1/length(pars$Ytest)) * sum(pred)
+  count <<- count+1
+  return(predMSE)
+  }
+
+# Write your own function myMSE()
+#pars <- as.list(X,Y,Xtest,Ytest)
+myMSE <- function(lambda,pars){
+n<-length(Xtest)
+model <- loess(Y ~ X, pars, enp.target = lambda)
+pred <- predict(model,Xtest,type="response")
+MSE <- sum((Ytest-pred)^2)/n
+cat("PredictedMSE:", paste(MSE, "\n"))
+MSE
+}
+
+```
+
+3. Use a simple approach: use function myMSE(), training and test sets with response LMR and predictor Day and the following lambda values to estimate the predictive MSE values:lambda = 0.1, 0.2,. . . ..,40
+```{r message=FALSE, warning=FALSE}
+myMSE <- function(lambda,pars){
+n<-length(Xtest)
+model <- loess(Y ~ X, pars, enp.target = lambda)
+pred <- predict(model,Xtest,type="response")
+MSE <- sum((Ytest-pred)^2)/n
+cat("PredictedMSE:", paste(MSE, "\n"))
+MSE
+}
+
+X<-train[,1]
+Y<-train[,3]
+Xtest<-test[,1]
+Ytest<-test[,3]
+data <- list(X=X,Y=Y,Xtest=Xtest,Ytest=Ytest)
+lambda <- seq(0.1,40,0.1)
+MSE <- c()
+Lambda <- c()
+for (i in 1:length(lambda)) {
+MSE[i] <- myMSE(lambda[i],data)
+}
+
+```
+4. Create a plot of the MSE values versus lambda and comment on which lambda value is optimal.
+How many evaluations of myMSE() were required (read ?optimize) to find this value?
+```{r}
+library(ggplot2)
+ggplot()+geom_point(aes(y=MSE,lambda))+
+ggtitle("Plot of MSE values versus lambda")+theme_dark()
+```
+
+```{r message=FALSE, warning=FALSE}
+# min MSE to find optimal lambda
+df <- data.frame("MSE"=MSE, "Lambda"=lambda)
+#min_mse
+min_mse <- which.min(df$MSE)
+#Opt_lambda
+Opt_lambda <- df[min_mse,2]
+```
+
+5. Use optimize function to find optimal MSE value
+```{r message=FALSE, warning=FALSE}
+
+s = optimize(myMSE, interval = c(0.1, 40), data,  tol = 0.01)
+min(MSE)
+```
+
+```{r message=FALSE, warning=FALSE}
+paste("Optimal lambda:", s$minimum)
+```
+
+6. Use optim function to find optimal MSE value
+```{r message=FALSE, warning=FALSE}
+s1 <- optim(par=35, myMSE, pars=data, method="BFGS", )
+```
+```{r message=FALSE, warning=FALSE}
+s1
+s1$convergence == 0
+```
+
+Question 2: Maximizing Likelihood
+
+1. Load the data into R
+```{r message=FALSE, warning=FALSE}
+load("data.RData")
+```
+
+2. Write down the log likelihood function for 100 observations and derive maximum likelihood estimators.
+
+The log likelihood function for 100 observations is:
+$$ l(\mu,\sigma^2:x_1,...,x_n) = -\frac{n}{2}ln(2\pi)-\frac{n}{2}ln(\sigma^2)-\frac{1}{2\sigma^2}\sum_{j=1}^{n}(x_j-\mu)^2$$
+
+$$ l(\mu,\sigma^2:x_1,...,x_n) = -{100}ln(\pi)-50ln(\sigma^2)-\frac{1}{2\sigma^2}\sum_{j=1}^{100}(x_j-\mu)^2$$
+
+The maximum likelihood estimators are:
+$$ \begin{aligned}
+ \mu_n &= \frac{1}{100}{\sum_{i=1}^{100} (x_i)} \\
+ \sigma_n &= \frac{1}{100}{\sum_{i=1}^{100} ((x_i-\mu)^2)^{1/2}}
+ \end{aligned}
+ $$
+
+```{r message=FALSE, warning=FALSE}
+#Derived formula for mu
+mu <- sum(data)/length(data)
+mu
+
+#Derived formula for sd
+sd <- sqrt((1/length(data))*sum((data-mu)^2))
+sd
+
+```
+
+3.
+```{r message=FALSE, warning=FALSE}
+negative_llh <- function(params,x){
+  mu = params[1]
+  sigma = params[2]
+  n = length(x)
+  nllik <- (0.5*n*log(2*pi)) + (0.5*n*log(sigma^2)) + ((1/(2*sigma^2))*sum((x-mu)^2))
+  return(nllik)
+}
+```
+
+Results optim() with Conjugate Gradient (gradient NOT specified):
+```{r message=FALSE, warning=FALSE}
+optim(c(0,1), fn = negative_llh, x = data, method = "CG")
+```
+Results optim() with BFGS (gradient NOT specified):
+```{r message=FALSE, warning=FALSE}
+optim(c(0,1), fn = negative_llh, x = data, method = "BFGS")
+
+```
+
+```{r message=FALSE, warning=FALSE}
+gradient = function(params, x = data){
+mu = params[1]
+sigma = params[2]
+n = length(x)
+partial_mu = -1/(sigma^2) * sum(x - mu)
+partial_sigma = -1/(sigma^3) * sum((x - mu)^2) + n / sigma
+gradient = c(partial_mu, partial_sigma)
+return(gradient)
+}
+```
+
+Results optim() with Conjugate Gradient (gradient specified):
+```{r message=FALSE, warning=FALSE}
+optim(c(0,1), fn = negative_llh, x = data, gr = gradient,  method = "CG")
+
+```
+
+Results optim() with BFGS (gradient specified):
+```{r message=FALSE, warning=FALSE}
+optim(c(0,1), fn = negative_llh, x = data, gr = gradient,  method = "BFGS")
+
+```
+
+4. Did the algorithms converge in all cases? What were the optimal values of parameters and how many function and gradient evaluations were required for algorithms to converge?
+Which settings would you recommend?
+
+All algorithms did converge since the printouts above show a value of 0 under convergence.
+
+The optimal parameter values are printed out above under par. The first value represents the
+optimal $\mu$ and the second value represents the optimal $\sigma$. The values all resemble the MLE
+estimates from task 3 very strongly which is good.
+
+The number of gradient and function evaluations are printed out above under counts. Overall, it seems like BFGS requires fewer evaluations than the Conjugate Gradient method.
+
+Recommended settings: BFGS Algorithm
+
+```{r message=FALSE, warning=FALSE}
+#Golden Section Search Iterations
+#Minimize the given function using optimize
+f <- function(x){
+  (print(x)-(1/3))^2
+}#use print to show steps of x
+xmin <- optimize(f, interval = c(0,1), tol=0.0001)
+print(xmin)
+```
+
+```{r message=FALSE, warning=FALSE}
+f <- function(x){
+  abs(x-2) + 2*abs(x-1)
+}
+#Non-differentiable function with optimx()
+f <- function(x){
+  return(abs(x-2) + 2*abs(x-1))
+}#same function written in a different manner
+xmin <- optimize(f, interval = c(0,3), tol = 0.0001)
+xmin
+plot(f,0,3)
+```
